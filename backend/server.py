@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timedelta
 import jwt
 import bcrypt
-from mcstatus import MinecraftServer
+from mcstatus import JavaServer
 import requests
 import json
 import base64
@@ -135,7 +135,7 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 async def get_minecraft_server_status() -> ServerStats:
     """Get Minecraft server status"""
     try:
-        server = MinecraftServer.lookup(f"{MC_SERVER_IP}:{MC_SERVER_PORT}")
+        server = JavaServer.lookup(f"{MC_SERVER_IP}:{MC_SERVER_PORT}")
         status = server.status()
         
         return ServerStats(
