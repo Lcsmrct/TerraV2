@@ -107,63 +107,78 @@ user_problem_statement: "Créer un site pour serveur Minecraft relié au serveur
 backend:
   - task: "Minecraft Server Integration"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented JavaServer integration with mcstatus library for server IP 91.197.6.209:25598. Need to test connection to actual server."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Successfully connected to real Minecraft server 91.197.6.209:25598. Server shows 17/50 players online, Paper 1.21.7, latency ~113ms. Both /api/server/status and /api/server/players endpoints working perfectly."
 
   - task: "User Authentication with Minecraft Username"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented JWT authentication using Minecraft username with Mojang API validation. Includes user registration and login endpoints."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: JWT authentication working perfectly. Successfully logged in with real Minecraft username 'Notch', received valid JWT token, /api/auth/me endpoint validates tokens correctly. User creation and login flow complete."
 
   - task: "Mojang API Integration"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented UUID retrieval and skin URL fetching from Mojang API. Functions: get_minecraft_uuid() and get_minecraft_skin()"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Mojang API integration working perfectly. Successfully retrieved UUID (069a79f444e94726a5befca90e38aaf5) and skin URL for username 'Notch'. Both get_minecraft_uuid() and get_minecraft_skin() functions operational."
 
   - task: "Admin Management System"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented admin endpoints for user management, statistics, and command logging. Admin users can toggle admin status and delete users."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Admin system working correctly. All admin endpoints (/api/admin/stats, /api/users, /api/users/{id}/admin, /api/admin/commands) properly return 403 for non-admin users. Access control implemented correctly."
 
   - task: "Database Models and Operations"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented User model with MongoDB integration using Motor. Includes user creation, authentication, and admin operations."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Database operations working perfectly. User creation, retrieval, and authentication all functional. MongoDB integration with Motor working correctly. User profiles accessible with proper access control."
 
 frontend:
   - task: "Minecraft Theme Design"
