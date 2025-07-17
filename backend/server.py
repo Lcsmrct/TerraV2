@@ -611,6 +611,7 @@ async def get_user_purchases(current_user: User = Depends(get_current_user)):
 async def get_all_purchases(current_user: User = Depends(get_admin_user)):
     """Get all purchases (admin only)"""
     purchases = await db.purchases.find().sort("created_at", -1).to_list(1000)
+    purchases = convert_objectid_to_str(purchases)
     return purchases
 
 # Include the router in the main app
