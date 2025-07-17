@@ -80,16 +80,16 @@ const Navbar = () => {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="minecraft-nav">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold minecraft-text">
+    <nav className="modern-nav">
+      <div className="nav-container">
+        <Link to="/" className="nav-logo">
           🎮 MonCraft Server
         </Link>
-        <div className="flex items-center space-x-4">
-          <Link to="/" className="minecraft-button">Accueil</Link>
+        <div className="nav-links">
+          <Link to="/" className="modern-button btn-secondary">Accueil</Link>
           {user ? (
             <>
-              <Link to="/profile" className="minecraft-button">
+              <Link to="/profile" className="modern-button btn-secondary">
                 {user.skin_url && (
                   <img 
                     src={user.skin_url} 
@@ -100,16 +100,16 @@ const Navbar = () => {
                 {user.minecraft_username}
               </Link>
               {user.is_admin && (
-                <Link to="/admin" className="minecraft-button admin-button">
-                  Admin
+                <Link to="/admin" className="modern-button btn-admin">
+                  👑 Admin
                 </Link>
               )}
-              <button onClick={logout} className="minecraft-button logout-button">
+              <button onClick={logout} className="modern-button btn-danger">
                 Déconnexion
               </button>
             </>
           ) : (
-            <Link to="/login" className="minecraft-button">Connexion</Link>
+            <Link to="/login" className="modern-button btn-primary">Connexion</Link>
           )}
         </div>
       </div>
@@ -142,67 +142,71 @@ const Home = () => {
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="hero-section">
-        <div className="hero-content">
-          <h1 className="text-6xl font-bold mb-4 minecraft-text">
-            Bienvenue sur MonCraft
-          </h1>
-          <p className="text-xl mb-8 text-gray-200">
-            Rejoignez notre communauté Minecraft et vivez des aventures épiques !
+        <div className="hero-content fade-in-up">
+          <h1>Bienvenue sur MonCraft</h1>
+          <p>
+            Rejoignez notre communauté de joueurs passionnés et découvrez un monde d'aventures sans limites
           </p>
           
           {/* Server Status */}
-          <div className="minecraft-panel mb-8">
-            <h2 className="text-2xl font-bold mb-4 minecraft-text">
+          <div className="modern-card mb-8">
+            <h2 className="text-2xl font-bold mb-6 text-center">
               📊 État du Serveur
             </h2>
             {loading ? (
               <div className="text-center">
-                <div className="minecraft-loader"></div>
-                <p>Chargement...</p>
+                <div className="modern-loader mb-4"></div>
+                <p className="text-secondary">Chargement des données...</p>
               </div>
             ) : serverStatus ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="stat-card">
                   <div className="stat-number">{serverStatus.players_online}</div>
-                  <div className="stat-label">Joueurs en ligne</div>
+                  <div className="stat-label">Joueurs connectés</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-number">{serverStatus.max_players}</div>
-                  <div className="stat-label">Joueurs max</div>
+                  <div className="stat-label">Capacité max</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-number">{serverStatus.latency?.toFixed(0) || 0}ms</div>
                   <div className="stat-label">Latence</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-number status-indicator">
+                  <div className="stat-number status-online">
                     {serverStatus.players_online >= 0 ? "🟢" : "🔴"}
                   </div>
-                  <div className="stat-label">Statut</div>
+                  <div className="stat-label">Statut serveur</div>
                 </div>
               </div>
             ) : (
-              <p className="text-red-400">Impossible de se connecter au serveur</p>
+              <div className="text-center">
+                <div className="text-error">❌ Impossible de se connecter au serveur</div>
+              </div>
             )}
           </div>
 
           {/* Server Info */}
-          <div className="minecraft-panel">
-            <h2 className="text-2xl font-bold mb-4 minecraft-text">
-              🌐 Informations du Serveur
+          <div className="modern-card">
+            <h2 className="text-2xl font-bold mb-6 text-center">
+              🌐 Informations de Connexion
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="info-card">
-                <strong>IP:</strong> 91.197.6.209
+              <div className="info-item">
+                <strong>Adresse IP:</strong>
+                <span className="font-mono">91.197.6.209</span>
               </div>
-              <div className="info-card">
-                <strong>Port:</strong> 25598
+              <div className="info-item">
+                <strong>Port:</strong>
+                <span className="font-mono">25598</span>
               </div>
-              <div className="info-card">
-                <strong>Version:</strong> {serverStatus?.server_version || 'Chargement...'}
+              <div className="info-item">
+                <strong>Version:</strong>
+                <span>{serverStatus?.server_version || 'Chargement...'}</span>
               </div>
-              <div className="info-card">
-                <strong>Type:</strong> Survie
+              <div className="info-item">
+                <strong>Mode de jeu:</strong>
+                <span>Survie Multijoueur</span>
               </div>
             </div>
           </div>
@@ -211,25 +215,38 @@ const Home = () => {
 
       {/* Features Section */}
       <div className="features-section">
-        <div className="container mx-auto px-4 py-16">
-          <h2 className="text-4xl font-bold text-center mb-12 minecraft-text">
-            🎯 Fonctionnalités
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="features-container">
+          <h2 className="features-title">🎯 Pourquoi nous choisir ?</h2>
+          <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">👥</div>
-              <h3 className="text-xl font-bold mb-2">Communauté Active</h3>
-              <p>Rejoignez des joueurs passionnés et participez à des événements réguliers.</p>
+              <span className="feature-icon">🌟</span>
+              <h3>Communauté Active</h3>
+              <p>Rejoignez des centaines de joueurs passionnés dans un environnement convivial et sécurisé.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">🏗️</div>
-              <h3 className="text-xl font-bold mb-2">Constructions Épiques</h3>
-              <p>Créez des constructions incroyables et partagez-les avec la communauté.</p>
+              <span className="feature-icon">🏗️</span>
+              <h3>Constructions Épiques</h3>
+              <p>Créez des œuvres d'art architecturales et partagez-les avec la communauté.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">⚔️</div>
-              <h3 className="text-xl font-bold mb-2">Aventures PvE</h3>
-              <p>Explorez des donjons personnalisés et affrontez des boss uniques.</p>
+              <span className="feature-icon">⚔️</span>
+              <h3>Aventures PvE</h3>
+              <p>Explorez des donjons personnalisés et affrontez des défis uniques.</p>
+            </div>
+            <div className="feature-card">
+              <span className="feature-icon">🛡️</span>
+              <h3>Sécurité Garantie</h3>
+              <p>Serveur protégé contre le grief avec système de sauvegarde automatique.</p>
+            </div>
+            <div className="feature-card">
+              <span className="feature-icon">🎪</span>
+              <h3>Événements Réguliers</h3>
+              <p>Participez à des concours et événements spéciaux avec des récompenses exclusives.</p>
+            </div>
+            <div className="feature-card">
+              <span className="feature-icon">💬</span>
+              <h3>Support 24/7</h3>
+              <p>Notre équipe de modérateurs est disponible pour vous aider à tout moment.</p>
             </div>
           </div>
         </div>
@@ -259,41 +276,58 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-minecraft-dark">
-      <div className="minecraft-panel max-w-md w-full">
-        <h2 className="text-3xl font-bold mb-6 text-center minecraft-text">
-          🔐 Connexion
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+      <div className="modern-card max-w-md w-full fade-in-up">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-2">🔐 Connexion</h2>
+          <p className="text-secondary">Connectez-vous avec votre nom d'utilisateur Minecraft</p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-2 text-primary">
               Nom d'utilisateur Minecraft
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="minecraft-input"
-              placeholder="Entrez votre nom Minecraft"
+              className="modern-input"
+              placeholder="Ex: Steve, Alex, Notch..."
               required
             />
+            <p className="text-xs text-secondary mt-2">
+              Utilisez votre nom d'utilisateur Minecraft officiel
+            </p>
           </div>
+          
           {error && (
             <div className="error-message">
-              {error}
+              ❌ {error}
             </div>
           )}
+          
           <button
             type="submit"
             disabled={loading}
-            className="minecraft-button w-full"
+            className="modern-button btn-primary w-full"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? (
+              <>
+                <div className="modern-loader" style={{width: '16px', height: '16px'}}></div>
+                Connexion...
+              </>
+            ) : (
+              'Se connecter'
+            )}
           </button>
         </form>
-        <p className="text-center text-gray-400 mt-4 text-sm">
-          Utilisez votre nom d'utilisateur Minecraft pour vous connecter
-        </p>
+        
+        <div className="mt-8 text-center">
+          <p className="text-xs text-secondary">
+            Nouveau sur notre serveur ? La connexion créera automatiquement votre compte.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -305,54 +339,57 @@ const Profile = () => {
   if (!user) return <Navigate to="/login" />;
 
   return (
-    <div className="min-h-screen bg-minecraft-dark py-8">
-      <div className="container mx-auto px-4">
-        <div className="minecraft-panel max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6 minecraft-text">
-            👤 Mon Profil
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="profile-avatar">
+    <div className="min-h-screen py-12">
+      <div className="profile-container">
+        <div className="modern-card fade-in-up">
+          <div className="profile-header">
+            <h2 className="text-3xl font-bold mb-6">👤 Mon Profil</h2>
+            
+            <div className="flex flex-col items-center">
               {user.skin_url ? (
                 <img 
                   src={user.skin_url} 
                   alt="Skin Minecraft" 
-                  className="w-32 h-32 rounded-lg mx-auto"
+                  className="profile-avatar"
                 />
               ) : (
-                <div className="w-32 h-32 bg-gray-600 rounded-lg mx-auto flex items-center justify-center">
+                <div className="profile-avatar bg-gray-600 flex items-center justify-center">
                   <span className="text-4xl">👤</span>
                 </div>
               )}
+              
+              <h3 className="text-2xl font-semibold mt-4">{user.minecraft_username}</h3>
+              <p className="text-secondary">
+                {user.is_admin ? '👑 Administrateur' : '🎮 Joueur'}
+              </p>
             </div>
-            
-            <div className="profile-info">
-              <div className="info-item">
-                <strong>Nom d'utilisateur:</strong>
-                <span>{user.minecraft_username}</span>
-              </div>
-              <div className="info-item">
-                <strong>UUID:</strong>
-                <span className="text-sm font-mono">{user.uuid}</span>
-              </div>
-              <div className="info-item">
-                <strong>Statut:</strong>
-                <span className={user.is_admin ? 'text-yellow-400' : 'text-green-400'}>
-                  {user.is_admin ? '👑 Administrateur' : '🎮 Joueur'}
-                </span>
-              </div>
-              <div className="info-item">
-                <strong>Membre depuis:</strong>
-                <span>{new Date(user.created_at).toLocaleDateString()}</span>
-              </div>
-              {user.last_login && (
-                <div className="info-item">
-                  <strong>Dernière connexion:</strong>
-                  <span>{new Date(user.last_login).toLocaleDateString()}</span>
-                </div>
-              )}
+          </div>
+          
+          <div className="profile-info">
+            <div className="info-item">
+              <strong>Nom d'utilisateur:</strong>
+              <span>{user.minecraft_username}</span>
             </div>
+            <div className="info-item">
+              <strong>UUID Minecraft:</strong>
+              <span className="font-mono text-sm">{user.uuid}</span>
+            </div>
+            <div className="info-item">
+              <strong>Statut:</strong>
+              <span className={user.is_admin ? 'text-cyan-400' : 'text-blue-400'}>
+                {user.is_admin ? '👑 Administrateur' : '🎮 Joueur'}
+              </span>
+            </div>
+            <div className="info-item">
+              <strong>Membre depuis:</strong>
+              <span>{new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
+            </div>
+            {user.last_login && (
+              <div className="info-item">
+                <strong>Dernière connexion:</strong>
+                <span>{new Date(user.last_login).toLocaleDateString('fr-FR')}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -413,22 +450,26 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-minecraft-dark flex items-center justify-center">
-        <div className="minecraft-loader"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="modern-loader mb-4"></div>
+          <p className="text-secondary">Chargement du tableau de bord...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-minecraft-dark py-8">
-      <div className="container mx-auto px-4">
-        <h2 className="text-4xl font-bold mb-8 minecraft-text">
-          👑 Panneau d'Administration
-        </h2>
+    <div className="min-h-screen py-12">
+      <div className="container">
+        <div className="admin-header">
+          <h2 className="admin-title">👑 Tableau de Bord Admin</h2>
+          <p className="text-secondary">Gérez votre serveur et votre communauté</p>
+        </div>
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="admin-stats">
             <div className="stat-card">
               <div className="stat-number">{stats.total_users}</div>
               <div className="stat-label">Utilisateurs totaux</div>
@@ -439,7 +480,7 @@ const Admin = () => {
             </div>
             <div className="stat-card">
               <div className="stat-number">{stats.server_status.players_online}</div>
-              <div className="stat-label">Joueurs en ligne</div>
+              <div className="stat-label">Joueurs connectés</div>
             </div>
             <div className="stat-card">
               <div className="stat-number">{stats.server_status.latency?.toFixed(0) || 0}ms</div>
@@ -449,69 +490,69 @@ const Admin = () => {
         )}
 
         {/* Users Management */}
-        <div className="minecraft-panel">
-          <h3 className="text-2xl font-bold mb-4 minecraft-text">
-            👥 Gestion des Utilisateurs
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-600">
-                  <th className="text-left p-3">Utilisateur</th>
-                  <th className="text-left p-3">UUID</th>
-                  <th className="text-left p-3">Statut</th>
-                  <th className="text-left p-3">Inscription</th>
-                  <th className="text-left p-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((userData) => (
-                  <tr key={userData.id} className="border-b border-gray-700">
-                    <td className="p-3">
-                      <div className="flex items-center">
-                        {userData.skin_url && (
-                          <img 
-                            src={userData.skin_url} 
-                            alt="Skin" 
-                            className="w-8 h-8 rounded-sm mr-3"
-                          />
-                        )}
-                        {userData.minecraft_username}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span className="text-sm font-mono">{userData.uuid?.substring(0, 8)}...</span>
-                    </td>
-                    <td className="p-3">
-                      <span className={userData.is_admin ? 'text-yellow-400' : 'text-green-400'}>
-                        {userData.is_admin ? '👑 Admin' : '🎮 Joueur'}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {new Date(userData.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => toggleAdmin(userData.id)}
-                          className="minecraft-button text-sm"
-                        >
-                          {userData.is_admin ? 'Retirer admin' : 'Faire admin'}
-                        </button>
-                        {userData.id !== user.id && (
-                          <button
-                            onClick={() => deleteUser(userData.id)}
-                            className="minecraft-button text-sm bg-red-600 hover:bg-red-700"
-                          >
-                            Supprimer
-                          </button>
-                        )}
-                      </div>
-                    </td>
+        <div className="admin-section">
+          <div className="modern-card">
+            <h3 className="text-2xl font-semibold mb-6">👥 Gestion des Utilisateurs</h3>
+            <div className="modern-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Joueur</th>
+                    <th>UUID</th>
+                    <th>Statut</th>
+                    <th>Inscription</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((userData) => (
+                    <tr key={userData.id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          {userData.skin_url && (
+                            <img 
+                              src={userData.skin_url} 
+                              alt="Skin" 
+                              className="w-8 h-8 rounded-lg"
+                            />
+                          )}
+                          <span className="font-semibold">{userData.minecraft_username}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="font-mono text-sm">{userData.uuid?.substring(0, 8)}...</span>
+                      </td>
+                      <td>
+                        <span className={userData.is_admin ? 'text-cyan-400' : 'text-blue-400'}>
+                          {userData.is_admin ? '👑 Admin' : '🎮 Joueur'}
+                        </span>
+                      </td>
+                      <td>
+                        {new Date(userData.created_at).toLocaleDateString('fr-FR')}
+                      </td>
+                      <td>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toggleAdmin(userData.id)}
+                            className="modern-button btn-secondary text-sm"
+                          >
+                            {userData.is_admin ? 'Retirer admin' : 'Promouvoir admin'}
+                          </button>
+                          {userData.id !== user.id && (
+                            <button
+                              onClick={() => deleteUser(userData.id)}
+                              className="modern-button btn-danger text-sm"
+                            >
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
