@@ -116,6 +116,17 @@ class ServerLog(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 # Utility functions
+def convert_objectid_to_str(obj):
+    """Convert ObjectId fields to strings for JSON serialization"""
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {key: convert_objectid_to_str(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_objectid_to_str(item) for item in obj]
+    else:
+        return obj
+
 def get_minecraft_uuid(username: str) -> Optional[str]:
     """Get UUID from Minecraft username using Mojang API"""
     try:
