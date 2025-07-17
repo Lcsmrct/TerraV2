@@ -604,6 +604,7 @@ async def purchase_item(item_id: str, current_user: User = Depends(get_current_u
 async def get_user_purchases(current_user: User = Depends(get_current_user)):
     """Get user's purchase history"""
     purchases = await db.purchases.find({"user_id": current_user.id}).sort("created_at", -1).to_list(1000)
+    purchases = convert_objectid_to_str(purchases)
     return purchases
 
 @api_router.get("/admin/shop/purchases")
