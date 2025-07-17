@@ -437,10 +437,11 @@ async def get_admin_stats(current_user: User = Depends(get_admin_user)):
     
     # Get recent logins
     recent_logins = await db.login_logs.find().sort("login_time", -1).limit(10).to_list(10)
+    recent_logins = convert_objectid_to_str(recent_logins)
     
     # Get total purchases
     total_purchases = await db.purchases.count_documents({})
-    total_revenue = await db.purchases.aggregate([
+    total_revenue_result = await db.purchases.aggregate([
         {"$match": {"status": "completed"}},
         {"$group": {"_id": None, "total": {"$sum": "$price"}}}
     ]).to_list(1)
@@ -452,7 +453,7 @@ async def get_admin_stats(current_user: User = Depends(get_admin_user)):
         "server_status": server_status,
         "recent_logins": recent_logins,
         "total_purchases": total_purchases,
-        "total_revenue": total_revenue[0]["total"] if total_revenue else 0
+        "total_revenue": total_revenue_result[0]["total"] if total_revenue_result else 0
     }
 
 @api_router.get("/admin/users/activity")
