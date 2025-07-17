@@ -156,6 +156,331 @@ class MinecraftBackendTester:
         except Exception as e:
             self.log_test("Database Operations", False, f"Exception: {str(e)}")
     
+    def test_user_tracking_enhancements(self):
+        """Test enhanced user tracking features (login_count, last_login, last_seen)"""
+        try:
+            # Login multiple times to test login_count increment
+            login_data = {"minecraft_username": TEST_USERNAME}
+            
+            # First login
+            response1 = self.session.post(f"{self.base_url}/auth/login", json=login_data)
+            if response1.status_code == 200:
+                token1 = response1.json()["access_token"]
+                user1 = response1.json()["user"]
+                
+                time.sleep(1)  # Small delay
+                
+                # Second login
+                response2 = self.session.post(f"{self.base_url}/auth/login", json=login_data)
+                if response2.status_code == 200:
+                    user2 = response2.json()["user"]
+                    
+                    # Check if login_count increased
+                    if user2.get("login_count", 0) > user1.get("login_count", 0):
+                        self.log_test("User Tracking Enhancements", True, "Login count tracking working", {
+                            "first_login_count": user1.get("login_count"),
+                            "second_login_count": user2.get("login_count"),
+                            "has_last_login": "last_login" in user2,
+                            "has_last_seen": "last_seen" in user2
+                        })
+                    else:
+                        self.log_test("User Tracking Enhancements", False, "Login count not incrementing", {
+                            "first_count": user1.get("login_count"),
+                            "second_count": user2.get("login_count")
+                        })
+                else:
+                    self.log_test("User Tracking Enhancements", False, f"Second login failed: HTTP {response2.status_code}")
+            else:
+                self.log_test("User Tracking Enhancements", False, f"First login failed: HTTP {response1.status_code}")
+        except Exception as e:
+            self.log_test("User Tracking Enhancements", False, f"Exception: {str(e)}")
+
+    def test_admin_stats_endpoint(self):
+        """Test new admin stats endpoint with enhanced statistics"""
+        try:
+            # Try with Admin user first
+            admin_login_data = {"minecraft_username": "Admin"}
+            response = self.session.post(f"{self.base_url}/auth/login", json=admin_login_data)
+            
+            if response.status_code == 200:
+                admin_token = response.json()["access_token"]
+                headers = {"Authorization": f"Bearer {admin_token}"}
+                
+                # Test admin stats endpoint
+                stats_response = self.session.get(f"{self.base_url}/admin/stats", headers=headers)
+                
+                if stats_response.status_code == 200:
+                    stats_data = stats_response.json()
+                    required_fields = ["total_users", "admin_users", "active_users_today", "server_status", "recent_logins", "total_purchases", "total_revenue"]
+                    missing_fields = [field for field in required_fields if field not in stats_data]
+                    
+                    if not missing_fields:
+                        self.log_test("Admin Stats Endpoint", True, "Enhanced admin stats working", {
+                            "total_users": stats_data.get("total_users"),
+                            "admin_users": stats_data.get("admin_users"),
+                            "active_users_today": stats_data.get("active_users_today"),
+                            "total_purchases": stats_data.get("total_purchases"),
+                            "total_revenue": stats_data.get("total_revenue")
+                        })
+                    else:
+                        self.log_test("Admin Stats Endpoint", False, f"Missing required fields: {missing_fields}", stats_data)
+                elif stats_response.status_code == 403:
+                    self.log_test("Admin Stats Endpoint", True, "Admin access control working (403 for non-admin)", {
+                        "status_code": 403,
+                        "message": "Access properly restricted to admin users"
+                    })
+                else:
+                    self.log_test("Admin Stats Endpoint", False, f"HTTP {stats_response.status_code}", stats_response.text)
+            else:
+                # Try with regular user to test access control
+                if self.user_token:
+                    headers = {"Authorization": f"Bearer {self.user_token}"}
+                    stats_response = self.session.get(f"{self.base_url}/admin/stats", headers=headers)
+                    
+                    if stats_response.status_code == 403:
+                        self.log_test("Admin Stats Endpoint", True, "Admin access control working (403 for non-admin)", {
+                            "status_code": 403,
+                            "message": "Access properly restricted to admin users"
+                        })
+                    else:
+                        self.log_test("Admin Stats Endpoint", False, f"Expected 403 for non-admin, got {stats_response.status_code}")
+                else:
+                    self.log_test("Admin Stats Endpoint", False, "No tokens available for testing")
+        except Exception as e:
+            self.log_test("Admin Stats Endpoint", False, f"Exception: {str(e)}")
+
+    def test_admin_user_activity_endpoint(self):
+        """Test admin user activity endpoint"""
+        try:
+            # Try with Admin user
+            admin_login_data = {"minecraft_username": "Admin"}
+            response = self.session.post(f"{self.base_url}/auth/login", json=admin_login_data)
+            
+            if response.status_code == 200:
+                admin_token = response.json()["access_token"]
+                headers = {"Authorization": f"Bearer {admin_token}"}
+                
+                # Test user activity endpoint
+                activity_response = self.session.get(f"{self.base_url}/admin/users/activity", headers=headers)
+                
+                if activity_response.status_code == 200:
+                    activity_data = activity_response.json()
+                    required_fields = ["login_logs", "user_stats"]
+                    missing_fields = [field for field in required_fields if field not in activity_data]
+                    
+                    if not missing_fields:
+                        self.log_test("Admin User Activity", True, "User activity endpoint working", {
+                            "login_logs_count": len(activity_data.get("login_logs", [])),
+                            "user_stats_count": len(activity_data.get("user_stats", [])),
+                            "has_login_logs": len(activity_data.get("login_logs", [])) > 0
+                        })
+                    else:
+                        self.log_test("Admin User Activity", False, f"Missing required fields: {missing_fields}", activity_data)
+                elif activity_response.status_code == 403:
+                    self.log_test("Admin User Activity", True, "Admin access control working (403 for non-admin)")
+                else:
+                    self.log_test("Admin User Activity", False, f"HTTP {activity_response.status_code}", activity_response.text)
+            else:
+                # Test access control with regular user
+                if self.user_token:
+                    headers = {"Authorization": f"Bearer {self.user_token}"}
+                    activity_response = self.session.get(f"{self.base_url}/admin/users/activity", headers=headers)
+                    
+                    if activity_response.status_code == 403:
+                        self.log_test("Admin User Activity", True, "Admin access control working (403 for non-admin)")
+                    else:
+                        self.log_test("Admin User Activity", False, f"Expected 403 for non-admin, got {activity_response.status_code}")
+                else:
+                    self.log_test("Admin User Activity", False, "No tokens available for testing")
+        except Exception as e:
+            self.log_test("Admin User Activity", False, f"Exception: {str(e)}")
+
+    def test_admin_server_logs_endpoint(self):
+        """Test admin server logs endpoint"""
+        try:
+            # Try with Admin user
+            admin_login_data = {"minecraft_username": "Admin"}
+            response = self.session.post(f"{self.base_url}/auth/login", json=admin_login_data)
+            
+            if response.status_code == 200:
+                admin_token = response.json()["access_token"]
+                headers = {"Authorization": f"Bearer {admin_token}"}
+                
+                # Test server logs endpoint
+                logs_response = self.session.get(f"{self.base_url}/admin/server/logs", headers=headers)
+                
+                if logs_response.status_code == 200:
+                    logs_data = logs_response.json()
+                    required_fields = ["logs", "statistics"]
+                    missing_fields = [field for field in required_fields if field not in logs_data]
+                    
+                    if not missing_fields:
+                        stats = logs_data.get("statistics", {})
+                        self.log_test("Admin Server Logs", True, "Server logs endpoint working", {
+                            "logs_count": len(logs_data.get("logs", [])),
+                            "avg_players": stats.get("avg_players"),
+                            "avg_latency": stats.get("avg_latency"),
+                            "total_logs": stats.get("total_logs")
+                        })
+                    else:
+                        self.log_test("Admin Server Logs", False, f"Missing required fields: {missing_fields}", logs_data)
+                elif logs_response.status_code == 403:
+                    self.log_test("Admin Server Logs", True, "Admin access control working (403 for non-admin)")
+                else:
+                    self.log_test("Admin Server Logs", False, f"HTTP {logs_response.status_code}", logs_response.text)
+            else:
+                # Test access control with regular user
+                if self.user_token:
+                    headers = {"Authorization": f"Bearer {self.user_token}"}
+                    logs_response = self.session.get(f"{self.base_url}/admin/server/logs", headers=headers)
+                    
+                    if logs_response.status_code == 403:
+                        self.log_test("Admin Server Logs", True, "Admin access control working (403 for non-admin)")
+                    else:
+                        self.log_test("Admin Server Logs", False, f"Expected 403 for non-admin, got {logs_response.status_code}")
+                else:
+                    self.log_test("Admin Server Logs", False, "No tokens available for testing")
+        except Exception as e:
+            self.log_test("Admin Server Logs", False, f"Exception: {str(e)}")
+
+    def test_shop_items_endpoint(self):
+        """Test shop items endpoint"""
+        try:
+            # Test getting shop items (public endpoint)
+            response = self.session.get(f"{self.base_url}/shop/items")
+            
+            if response.status_code == 200:
+                items = response.json()
+                if isinstance(items, list) and len(items) > 0:
+                    # Check first item structure
+                    first_item = items[0]
+                    required_fields = ["id", "name", "description", "price", "category", "in_stock"]
+                    missing_fields = [field for field in required_fields if field not in first_item]
+                    
+                    if not missing_fields:
+                        self.log_test("Shop Items Endpoint", True, "Shop items endpoint working", {
+                            "items_count": len(items),
+                            "sample_item": {
+                                "name": first_item.get("name"),
+                                "price": first_item.get("price"),
+                                "category": first_item.get("category")
+                            }
+                        })
+                    else:
+                        self.log_test("Shop Items Endpoint", False, f"Missing required fields in items: {missing_fields}", first_item)
+                else:
+                    self.log_test("Shop Items Endpoint", False, "No items returned or invalid format", items)
+            else:
+                self.log_test("Shop Items Endpoint", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Shop Items Endpoint", False, f"Exception: {str(e)}")
+
+    def test_shop_purchase_functionality(self):
+        """Test shop purchase functionality"""
+        try:
+            if not self.user_token:
+                self.log_test("Shop Purchase Functionality", False, "No user token available for testing")
+                return
+            
+            headers = {"Authorization": f"Bearer {self.user_token}"}
+            
+            # First get available items
+            items_response = self.session.get(f"{self.base_url}/shop/items")
+            if items_response.status_code == 200:
+                items = items_response.json()
+                if items and len(items) > 0:
+                    test_item = items[0]
+                    item_id = test_item["id"]
+                    
+                    # Test purchase
+                    purchase_response = self.session.post(f"{self.base_url}/shop/purchase/{item_id}", headers=headers)
+                    
+                    if purchase_response.status_code == 200:
+                        purchase_data = purchase_response.json()
+                        if "message" in purchase_data and "purchase_id" in purchase_data:
+                            self.log_test("Shop Purchase Functionality", True, "Purchase functionality working", {
+                                "item_purchased": test_item.get("name"),
+                                "purchase_id": purchase_data.get("purchase_id"),
+                                "message": purchase_data.get("message")
+                            })
+                        else:
+                            self.log_test("Shop Purchase Functionality", False, "Invalid purchase response format", purchase_data)
+                    else:
+                        self.log_test("Shop Purchase Functionality", False, f"Purchase failed: HTTP {purchase_response.status_code}", purchase_response.text)
+                else:
+                    self.log_test("Shop Purchase Functionality", False, "No items available for purchase testing")
+            else:
+                self.log_test("Shop Purchase Functionality", False, f"Could not get items: HTTP {items_response.status_code}")
+        except Exception as e:
+            self.log_test("Shop Purchase Functionality", False, f"Exception: {str(e)}")
+
+    def test_user_purchase_history(self):
+        """Test user purchase history endpoint"""
+        try:
+            if not self.user_token:
+                self.log_test("User Purchase History", False, "No user token available for testing")
+                return
+            
+            headers = {"Authorization": f"Bearer {self.user_token}"}
+            
+            # Test getting user's purchase history
+            response = self.session.get(f"{self.base_url}/shop/purchases", headers=headers)
+            
+            if response.status_code == 200:
+                purchases = response.json()
+                if isinstance(purchases, list):
+                    self.log_test("User Purchase History", True, "Purchase history endpoint working", {
+                        "purchases_count": len(purchases),
+                        "has_purchases": len(purchases) > 0
+                    })
+                else:
+                    self.log_test("User Purchase History", False, "Invalid response format", purchases)
+            else:
+                self.log_test("User Purchase History", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("User Purchase History", False, f"Exception: {str(e)}")
+
+    def test_admin_shop_purchases(self):
+        """Test admin shop purchases endpoint"""
+        try:
+            # Try with Admin user
+            admin_login_data = {"minecraft_username": "Admin"}
+            response = self.session.post(f"{self.base_url}/auth/login", json=admin_login_data)
+            
+            if response.status_code == 200:
+                admin_token = response.json()["access_token"]
+                headers = {"Authorization": f"Bearer {admin_token}"}
+                
+                # Test admin purchases endpoint
+                purchases_response = self.session.get(f"{self.base_url}/admin/shop/purchases", headers=headers)
+                
+                if purchases_response.status_code == 200:
+                    purchases = purchases_response.json()
+                    if isinstance(purchases, list):
+                        self.log_test("Admin Shop Purchases", True, "Admin purchases endpoint working", {
+                            "total_purchases": len(purchases)
+                        })
+                    else:
+                        self.log_test("Admin Shop Purchases", False, "Invalid response format", purchases)
+                elif purchases_response.status_code == 403:
+                    self.log_test("Admin Shop Purchases", True, "Admin access control working (403 for non-admin)")
+                else:
+                    self.log_test("Admin Shop Purchases", False, f"HTTP {purchases_response.status_code}", purchases_response.text)
+            else:
+                # Test access control with regular user
+                if self.user_token:
+                    headers = {"Authorization": f"Bearer {self.user_token}"}
+                    purchases_response = self.session.get(f"{self.base_url}/admin/shop/purchases", headers=headers)
+                    
+                    if purchases_response.status_code == 403:
+                        self.log_test("Admin Shop Purchases", True, "Admin access control working (403 for non-admin)")
+                    else:
+                        self.log_test("Admin Shop Purchases", False, f"Expected 403 for non-admin, got {purchases_response.status_code}")
+                else:
+                    self.log_test("Admin Shop Purchases", False, "No tokens available for testing")
+        except Exception as e:
+            self.log_test("Admin Shop Purchases", False, f"Exception: {str(e)}")
+
     def test_admin_system(self):
         """Test admin management system"""
         try:
