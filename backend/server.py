@@ -461,6 +461,7 @@ async def get_user_activity(current_user: User = Depends(get_admin_user)):
     """Get user activity logs"""
     # Get login logs
     login_logs = await db.login_logs.find().sort("login_time", -1).limit(50).to_list(50)
+    login_logs = convert_objectid_to_str(login_logs)
     
     # Get user stats
     user_stats = await db.users.aggregate([
@@ -476,6 +477,7 @@ async def get_user_activity(current_user: User = Depends(get_admin_user)):
         {"$sort": {"login_count": -1}},
         {"$limit": 20}
     ]).to_list(20)
+    user_stats = convert_objectid_to_str(user_stats)
     
     return {
         "login_logs": login_logs,
