@@ -7,7 +7,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timedelta
 import jwt
@@ -47,7 +47,11 @@ class User(BaseModel):
     is_admin: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_login: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
     skin_url: Optional[str] = None
+    login_count: int = 0
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
 
 class UserCreate(BaseModel):
     minecraft_username: str
@@ -67,6 +71,48 @@ class AdminCommand(BaseModel):
     command: str
     executed_by: str
     executed_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ShopItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    price: float
+    category: str
+    image_url: Optional[str] = None
+    in_stock: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ShopItemCreate(BaseModel):
+    name: str
+    description: str
+    price: float
+    category: str
+    image_url: Optional[str] = None
+
+class Purchase(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    item_id: str
+    item_name: str
+    price: float
+    status: str = "pending"  # pending, completed, cancelled
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class LoginLog(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    minecraft_username: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    login_time: datetime = Field(default_factory=datetime.utcnow)
+    success: bool = True
+
+class ServerLog(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    players_online: int
+    max_players: int
+    latency: float
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 # Utility functions
 def get_minecraft_uuid(username: str) -> Optional[str]:
@@ -119,6 +165,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
         
+        # Update last seen
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"last_seen": datetime.utcnow()}}
+        )
+        
         return User(**user)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -138,13 +190,24 @@ async def get_minecraft_server_status() -> ServerStats:
         server = JavaServer.lookup(f"{MC_SERVER_IP}:{MC_SERVER_PORT}")
         status = server.status()
         
-        return ServerStats(
+        server_stats = ServerStats(
             players_online=status.players.online,
             max_players=status.players.max,
             server_version=status.version.name if status.version else None,
             motd=status.description if hasattr(status, 'description') else None,
             latency=status.latency
         )
+        
+        # Log server stats
+        await db.server_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "players_online": server_stats.players_online,
+            "max_players": server_stats.max_players,
+            "latency": server_stats.latency,
+            "timestamp": datetime.utcnow()
+        })
+        
+        return server_stats
     except Exception as e:
         logging.error(f"Error getting server status: {e}")
         # Return default values if server is down
@@ -160,20 +223,57 @@ async def get_minecraft_server_status() -> ServerStats:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    # Create admin user if not exists
-    admin_user = await db.users.find_one({"is_admin": True})
+    # Create default admin user if not exists
+    admin_user = await db.users.find_one({"minecraft_username": "Admin"})
     if not admin_user:
         admin_uuid = get_minecraft_uuid("Admin")
-        if admin_uuid:
-            admin_skin = get_minecraft_skin(admin_uuid)
-            await db.users.insert_one({
+        admin_skin = get_minecraft_skin(admin_uuid) if admin_uuid else None
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "minecraft_username": "Admin",
+            "uuid": admin_uuid or "admin-uuid",
+            "is_admin": True,
+            "created_at": datetime.utcnow(),
+            "skin_url": admin_skin,
+            "login_count": 0
+        })
+    
+    # Create default shop items
+    shop_items_count = await db.shop_items.count_documents({})
+    if shop_items_count == 0:
+        default_items = [
+            {
                 "id": str(uuid.uuid4()),
-                "minecraft_username": "Admin",
-                "uuid": admin_uuid,
-                "is_admin": True,
-                "created_at": datetime.utcnow(),
-                "skin_url": admin_skin
-            })
+                "name": "Rang VIP",
+                "description": "Accès à des zones exclusives et commandes spéciales",
+                "price": 9.99,
+                "category": "Rangs",
+                "image_url": "https://via.placeholder.com/300x200?text=VIP",
+                "in_stock": True,
+                "created_at": datetime.utcnow()
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Pack Diamant",
+                "description": "64 diamants + équipement enchantée",
+                "price": 4.99,
+                "category": "Items",
+                "image_url": "https://via.placeholder.com/300x200?text=Diamant",
+                "in_stock": True,
+                "created_at": datetime.utcnow()
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Terre Privée",
+                "description": "Claim une zone de 100x100 blocs",
+                "price": 7.99,
+                "category": "Terrains",
+                "image_url": "https://via.placeholder.com/300x200?text=Terrain",
+                "in_stock": True,
+                "created_at": datetime.utcnow()
+            }
+        ]
+        await db.shop_items.insert_many(default_items)
     
     yield
     # Shutdown
@@ -207,16 +307,34 @@ async def login(user_data: UserLogin):
             "is_admin": False,
             "created_at": datetime.utcnow(),
             "last_login": datetime.utcnow(),
-            "skin_url": skin_url
+            "last_seen": datetime.utcnow(),
+            "skin_url": skin_url,
+            "login_count": 1
         }
         await db.users.insert_one(user_dict)
         user = user_dict
     else:
-        # Update last login
+        # Update last login and increment login count
         await db.users.update_one(
             {"id": user["id"]},
-            {"$set": {"last_login": datetime.utcnow()}}
+            {
+                "$set": {
+                    "last_login": datetime.utcnow(),
+                    "last_seen": datetime.utcnow()
+                },
+                "$inc": {"login_count": 1}
+            }
         )
+        user["login_count"] = user.get("login_count", 0) + 1
+    
+    # Log login
+    await db.login_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "minecraft_username": user_data.minecraft_username,
+        "login_time": datetime.utcnow(),
+        "success": True
+    })
     
     # Create JWT token
     token = create_jwt_token(user)
@@ -295,15 +413,82 @@ async def delete_user(user_id: str, current_user: User = Depends(get_admin_user)
 @api_router.get("/admin/stats")
 async def get_admin_stats(current_user: User = Depends(get_admin_user)):
     """Get admin statistics"""
+    # Get user stats
     total_users = await db.users.count_documents({})
     admin_users = await db.users.count_documents({"is_admin": True})
+    active_users_today = await db.users.count_documents({
+        "last_seen": {"$gte": datetime.utcnow() - timedelta(days=1)}
+    })
+    
+    # Get server status
     server_status = await get_minecraft_server_status()
+    
+    # Get recent logins
+    recent_logins = await db.login_logs.find().sort("login_time", -1).limit(10).to_list(10)
+    
+    # Get total purchases
+    total_purchases = await db.purchases.count_documents({})
+    total_revenue = await db.purchases.aggregate([
+        {"$match": {"status": "completed"}},
+        {"$group": {"_id": None, "total": {"$sum": "$price"}}}
+    ]).to_list(1)
     
     return {
         "total_users": total_users,
         "admin_users": admin_users,
+        "active_users_today": active_users_today,
         "server_status": server_status,
-        "recent_logins": await db.users.find({"last_login": {"$ne": None}}).sort("last_login", -1).limit(10).to_list(10)
+        "recent_logins": recent_logins,
+        "total_purchases": total_purchases,
+        "total_revenue": total_revenue[0]["total"] if total_revenue else 0
+    }
+
+@api_router.get("/admin/users/activity")
+async def get_user_activity(current_user: User = Depends(get_admin_user)):
+    """Get user activity logs"""
+    # Get login logs
+    login_logs = await db.login_logs.find().sort("login_time", -1).limit(50).to_list(50)
+    
+    # Get user stats
+    user_stats = await db.users.aggregate([
+        {
+            "$project": {
+                "minecraft_username": 1,
+                "login_count": 1,
+                "last_login": 1,
+                "last_seen": 1,
+                "created_at": 1
+            }
+        },
+        {"$sort": {"login_count": -1}},
+        {"$limit": 20}
+    ]).to_list(20)
+    
+    return {
+        "login_logs": login_logs,
+        "user_stats": user_stats
+    }
+
+@api_router.get("/admin/server/logs")
+async def get_server_logs(current_user: User = Depends(get_admin_user)):
+    """Get server performance logs"""
+    logs = await db.server_logs.find().sort("timestamp", -1).limit(100).to_list(100)
+    
+    # Calculate averages
+    if logs:
+        avg_players = sum(log["players_online"] for log in logs) / len(logs)
+        avg_latency = sum(log["latency"] for log in logs) / len(logs)
+    else:
+        avg_players = 0
+        avg_latency = 0
+    
+    return {
+        "logs": logs,
+        "statistics": {
+            "avg_players": round(avg_players, 1),
+            "avg_latency": round(avg_latency, 1),
+            "total_logs": len(logs)
+        }
     }
 
 @api_router.post("/admin/commands")
@@ -313,6 +498,7 @@ async def execute_command(command: AdminCommand, current_user: User = Depends(ge
     # For now, we'll just log the command
     command_dict = command.dict()
     command_dict["executed_by"] = current_user.minecraft_username
+    command_dict["id"] = str(uuid.uuid4())
     
     await db.commands.insert_one(command_dict)
     
@@ -323,6 +509,92 @@ async def get_command_history(current_user: User = Depends(get_admin_user)):
     """Get command history"""
     commands = await db.commands.find().sort("executed_at", -1).limit(50).to_list(50)
     return commands
+
+# Shop endpoints
+@api_router.get("/shop/items")
+async def get_shop_items():
+    """Get all shop items"""
+    items = await db.shop_items.find({"in_stock": True}).to_list(1000)
+    return [ShopItem(**item) for item in items]
+
+@api_router.get("/shop/items/{item_id}")
+async def get_shop_item(item_id: str):
+    """Get specific shop item"""
+    item = await db.shop_items.find_one({"id": item_id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return ShopItem(**item)
+
+@api_router.post("/shop/items")
+async def create_shop_item(item: ShopItemCreate, current_user: User = Depends(get_admin_user)):
+    """Create new shop item (admin only)"""
+    item_dict = item.dict()
+    item_dict["id"] = str(uuid.uuid4())
+    item_dict["created_at"] = datetime.utcnow()
+    item_dict["in_stock"] = True
+    
+    await db.shop_items.insert_one(item_dict)
+    return ShopItem(**item_dict)
+
+@api_router.put("/shop/items/{item_id}")
+async def update_shop_item(item_id: str, item: ShopItemCreate, current_user: User = Depends(get_admin_user)):
+    """Update shop item (admin only)"""
+    result = await db.shop_items.update_one(
+        {"id": item_id},
+        {"$set": item.dict()}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    updated_item = await db.shop_items.find_one({"id": item_id})
+    return ShopItem(**updated_item)
+
+@api_router.delete("/shop/items/{item_id}")
+async def delete_shop_item(item_id: str, current_user: User = Depends(get_admin_user)):
+    """Delete shop item (admin only)"""
+    result = await db.shop_items.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    return {"message": "Item deleted successfully"}
+
+@api_router.post("/shop/purchase/{item_id}")
+async def purchase_item(item_id: str, current_user: User = Depends(get_current_user)):
+    """Purchase an item"""
+    # Get item
+    item = await db.shop_items.find_one({"id": item_id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    if not item["in_stock"]:
+        raise HTTPException(status_code=400, detail="Item out of stock")
+    
+    # Create purchase record
+    purchase = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user.id,
+        "item_id": item_id,
+        "item_name": item["name"],
+        "price": item["price"],
+        "status": "pending",
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.purchases.insert_one(purchase)
+    
+    return {"message": "Purchase initiated", "purchase_id": purchase["id"]}
+
+@api_router.get("/shop/purchases")
+async def get_user_purchases(current_user: User = Depends(get_current_user)):
+    """Get user's purchase history"""
+    purchases = await db.purchases.find({"user_id": current_user.id}).sort("created_at", -1).to_list(1000)
+    return purchases
+
+@api_router.get("/admin/shop/purchases")
+async def get_all_purchases(current_user: User = Depends(get_admin_user)):
+    """Get all purchases (admin only)"""
+    purchases = await db.purchases.find().sort("created_at", -1).to_list(1000)
+    return purchases
 
 # Include the router in the main app
 app.include_router(api_router)

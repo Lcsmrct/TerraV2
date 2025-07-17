@@ -87,6 +87,7 @@ const Navbar = () => {
         </Link>
         <div className="nav-links">
           <Link to="/" className="modern-button btn-secondary">Accueil</Link>
+          <Link to="/shop" className="modern-button btn-secondary">🛒 Boutique</Link>
           {user ? (
             <>
               <Link to="/profile" className="modern-button btn-secondary">
@@ -255,6 +256,116 @@ const Home = () => {
   );
 };
 
+const Shop = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  const fetchItems = async () => {
+    try {
+      const response = await axios.get(`${API}/shop/items`);
+      setItems(response.data);
+    } catch (error) {
+      console.error('Error fetching shop items:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const purchaseItem = async (itemId) => {
+    if (!user) {
+      alert('Vous devez être connecté pour acheter');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API}/shop/purchase/${itemId}`);
+      alert('Achat initié avec succès !');
+    } catch (error) {
+      alert('Erreur lors de l\'achat: ' + (error.response?.data?.detail || 'Erreur inconnue'));
+    }
+  };
+
+  const categories = ['all', ...new Set(items.map(item => item.category))];
+  const filteredItems = selectedCategory === 'all' 
+    ? items 
+    : items.filter(item => item.category === selectedCategory);
+
+  return (
+    <div className="min-h-screen py-12">
+      <div className="container">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-4">🛒 Boutique</h1>
+          <p className="text-secondary">Améliorez votre expérience de jeu avec nos articles premium</p>
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex justify-center mb-8">
+          <div className="flex gap-2 flex-wrap">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`modern-button ${selectedCategory === category ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                {category === 'all' ? 'Tous' : category}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Shop Items */}
+        {loading ? (
+          <div className="text-center">
+            <div className="modern-loader mb-4"></div>
+            <p className="text-secondary">Chargement des articles...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredItems.map(item => (
+              <div key={item.id} className="modern-card">
+                <div className="mb-4">
+                  <img 
+                    src={item.image_url} 
+                    alt={item.name}
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                </div>
+                <h3 className="text-xl font-bold mb-2">{item.name}</h3>
+                <p className="text-secondary mb-4">{item.description}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-2xl font-bold text-primary">{item.price}€</span>
+                  <button
+                    onClick={() => purchaseItem(item.id)}
+                    className="modern-button btn-primary"
+                    disabled={!user}
+                  >
+                    {user ? 'Acheter' : 'Connexion requise'}
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <span className="text-sm text-secondary">Catégorie: {item.category}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {filteredItems.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-secondary">Aucun article disponible dans cette catégorie.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Login = () => {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
@@ -335,6 +446,25 @@ const Login = () => {
 
 const Profile = () => {
   const { user } = useAuth();
+  const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchPurchases();
+    }
+  }, [user]);
+
+  const fetchPurchases = async () => {
+    try {
+      const response = await axios.get(`${API}/shop/purchases`);
+      setPurchases(response.data);
+    } catch (error) {
+      console.error('Error fetching purchases:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!user) return <Navigate to="/login" />;
 
@@ -381,6 +511,10 @@ const Profile = () => {
               </span>
             </div>
             <div className="info-item">
+              <strong>Connexions:</strong>
+              <span>{user.login_count || 0} fois</span>
+            </div>
+            <div className="info-item">
               <strong>Membre depuis:</strong>
               <span>{new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
             </div>
@@ -392,6 +526,38 @@ const Profile = () => {
             )}
           </div>
         </div>
+
+        {/* Purchase History */}
+        <div className="modern-card mt-8">
+          <h3 className="text-2xl font-bold mb-6">🛒 Historique des Achats</h3>
+          {loading ? (
+            <div className="text-center">
+              <div className="modern-loader mb-4"></div>
+              <p className="text-secondary">Chargement...</p>
+            </div>
+          ) : purchases.length > 0 ? (
+            <div className="space-y-4">
+              {purchases.map(purchase => (
+                <div key={purchase.id} className="info-item">
+                  <div>
+                    <strong>{purchase.item_name}</strong>
+                    <p className="text-sm text-secondary">
+                      {new Date(purchase.created_at).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold">{purchase.price}€</div>
+                    <div className={`text-sm ${purchase.status === 'completed' ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {purchase.status}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-secondary">Aucun achat pour le moment</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -401,7 +567,11 @@ const Admin = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
+  const [activity, setActivity] = useState(null);
+  const [serverLogs, setServerLogs] = useState(null);
+  const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
     if (user?.is_admin) {
@@ -411,12 +581,18 @@ const Admin = () => {
 
   const fetchAdminData = async () => {
     try {
-      const [statsResponse, usersResponse] = await Promise.all([
+      const [statsResponse, usersResponse, activityResponse, logsResponse, purchasesResponse] = await Promise.all([
         axios.get(`${API}/admin/stats`),
-        axios.get(`${API}/users`)
+        axios.get(`${API}/users`),
+        axios.get(`${API}/admin/users/activity`),
+        axios.get(`${API}/admin/server/logs`),
+        axios.get(`${API}/admin/shop/purchases`)
       ]);
       setStats(statsResponse.data);
       setUsers(usersResponse.data);
+      setActivity(activityResponse.data);
+      setServerLogs(logsResponse.data);
+      setPurchases(purchasesResponse.data);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -467,30 +643,51 @@ const Admin = () => {
           <p className="text-secondary">Gérez votre serveur et votre communauté</p>
         </div>
 
-        {/* Stats */}
-        {stats && (
+        {/* Navigation Tabs */}
+        <div className="flex justify-center mb-8">
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { id: 'dashboard', label: '📊 Tableau de bord' },
+              { id: 'users', label: '👥 Utilisateurs' },
+              { id: 'activity', label: '📈 Activité' },
+              { id: 'server', label: '🖥️ Serveur' },
+              { id: 'shop', label: '🛒 Boutique' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`modern-button ${activeTab === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && stats && (
           <div className="admin-stats">
             <div className="stat-card">
               <div className="stat-number">{stats.total_users}</div>
               <div className="stat-label">Utilisateurs totaux</div>
             </div>
             <div className="stat-card">
-              <div className="stat-number">{stats.admin_users}</div>
-              <div className="stat-label">Administrateurs</div>
+              <div className="stat-number">{stats.active_users_today}</div>
+              <div className="stat-label">Actifs aujourd'hui</div>
             </div>
             <div className="stat-card">
               <div className="stat-number">{stats.server_status.players_online}</div>
               <div className="stat-label">Joueurs connectés</div>
             </div>
             <div className="stat-card">
-              <div className="stat-number">{stats.server_status.latency?.toFixed(0) || 0}ms</div>
-              <div className="stat-label">Latence serveur</div>
+              <div className="stat-number">{stats.total_revenue.toFixed(2)}€</div>
+              <div className="stat-label">Revenus boutique</div>
             </div>
           </div>
         )}
 
-        {/* Users Management */}
-        <div className="admin-section">
+        {/* Users Tab */}
+        {activeTab === 'users' && (
           <div className="modern-card">
             <h3 className="text-2xl font-semibold mb-6">👥 Gestion des Utilisateurs</h3>
             <div className="modern-table">
@@ -500,6 +697,7 @@ const Admin = () => {
                     <th>Joueur</th>
                     <th>UUID</th>
                     <th>Statut</th>
+                    <th>Connexions</th>
                     <th>Inscription</th>
                     <th>Actions</th>
                   </tr>
@@ -527,6 +725,7 @@ const Admin = () => {
                           {userData.is_admin ? '👑 Admin' : '🎮 Joueur'}
                         </span>
                       </td>
+                      <td>{userData.login_count || 0}</td>
                       <td>
                         {new Date(userData.created_at).toLocaleDateString('fr-FR')}
                       </td>
@@ -554,7 +753,120 @@ const Admin = () => {
               </table>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Activity Tab */}
+        {activeTab === 'activity' && activity && (
+          <div className="space-y-8">
+            <div className="modern-card">
+              <h3 className="text-2xl font-semibold mb-6">📈 Activité des Utilisateurs</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-lg font-semibold mb-4">Connexions récentes</h4>
+                  <div className="space-y-2">
+                    {activity.login_logs.slice(0, 10).map(log => (
+                      <div key={log.id} className="info-item">
+                        <span>{log.minecraft_username}</span>
+                        <span className="text-sm text-secondary">
+                          {new Date(log.login_time).toLocaleString('fr-FR')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold mb-4">Utilisateurs les plus actifs</h4>
+                  <div className="space-y-2">
+                    {activity.user_stats.slice(0, 10).map(userStat => (
+                      <div key={userStat._id} className="info-item">
+                        <span>{userStat.minecraft_username}</span>
+                        <span className="text-sm text-secondary">
+                          {userStat.login_count} connexions
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Server Tab */}
+        {activeTab === 'server' && serverLogs && (
+          <div className="modern-card">
+            <h3 className="text-2xl font-semibold mb-6">🖥️ Logs du Serveur</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="stat-card">
+                <div className="stat-number">{serverLogs.statistics.avg_players}</div>
+                <div className="stat-label">Joueurs moyens</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{serverLogs.statistics.avg_latency}ms</div>
+                <div className="stat-label">Latence moyenne</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{serverLogs.statistics.total_logs}</div>
+                <div className="stat-label">Logs enregistrés</div>
+              </div>
+            </div>
+            <div className="modern-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Joueurs</th>
+                    <th>Latence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {serverLogs.logs.slice(0, 20).map(log => (
+                    <tr key={log.id}>
+                      <td>{new Date(log.timestamp).toLocaleString('fr-FR')}</td>
+                      <td>{log.players_online}</td>
+                      <td>{log.latency}ms</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Shop Tab */}
+        {activeTab === 'shop' && (
+          <div className="modern-card">
+            <h3 className="text-2xl font-semibold mb-6">🛒 Gestion Boutique</h3>
+            <div className="modern-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Article</th>
+                    <th>Acheteur</th>
+                    <th>Prix</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchases.map(purchase => (
+                    <tr key={purchase.id}>
+                      <td>{purchase.item_name}</td>
+                      <td>{purchase.user_id}</td>
+                      <td>{purchase.price}€</td>
+                      <td>
+                        <span className={purchase.status === 'completed' ? 'text-green-400' : 'text-yellow-400'}>
+                          {purchase.status}
+                        </span>
+                      </td>
+                      <td>{new Date(purchase.created_at).toLocaleDateString('fr-FR')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -569,6 +881,7 @@ function App() {
           <Navbar />
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<Shop />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
