@@ -488,6 +488,7 @@ async def get_user_activity(current_user: User = Depends(get_admin_user)):
 async def get_server_logs(current_user: User = Depends(get_admin_user)):
     """Get server performance logs"""
     logs = await db.server_logs.find().sort("timestamp", -1).limit(100).to_list(100)
+    logs = convert_objectid_to_str(logs)
     
     # Calculate averages
     if logs:
