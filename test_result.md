@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Créer un site pour serveur Minecraft relié au serveur MC, avec page d'accueil montrant le nombre de joueurs en ligne, authentification des joueurs avec nom Minecraft, et espace admin privé"
+user_problem_statement: "Je viens d'ajouter de nombreuses fonctionnalités au site Minecraft. Merci de tester tous les nouveaux endpoints backend : Amélioration du tracking des utilisateurs, Panel admin enrichi avec 5 onglets, Système de boutique complet, Nouveaux endpoints, Modèles de données enrichis"
 
 backend:
   - task: "Minecraft Server Integration"
@@ -119,6 +119,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Successfully connected to real Minecraft server 91.197.6.209:25598. Server shows 17/50 players online, Paper 1.21.7, latency ~113ms. Both /api/server/status and /api/server/players endpoints working perfectly."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED: Server integration still working perfectly. Current status: 18/50 players online, Paper 1.21.7, latency ~113ms. All server endpoints operational."
 
   - task: "User Authentication with Minecraft Username"
     implemented: true
@@ -134,6 +137,21 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: JWT authentication working perfectly. Successfully logged in with real Minecraft username 'Notch', received valid JWT token, /api/auth/me endpoint validates tokens correctly. User creation and login flow complete."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED: Authentication system working perfectly. JWT tokens valid, user login/registration functional, /api/auth/me endpoint operational."
+
+  - task: "Enhanced User Tracking System"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Enhanced user tracking working perfectly. Login count increments correctly (from 7 to 8), last_login and last_seen fields properly updated. User tracking enhancements fully functional."
 
   - task: "Mojang API Integration"
     implemented: true
@@ -149,6 +167,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Mojang API integration working perfectly. Successfully retrieved UUID (069a79f444e94726a5befca90e38aaf5) and skin URL for username 'Notch'. Both get_minecraft_uuid() and get_minecraft_skin() functions operational."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED: Mojang API integration still working perfectly. UUID and skin retrieval functional for real Minecraft usernames."
 
   - task: "Admin Management System"
     implemented: true
@@ -164,6 +185,93 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Admin system working correctly. All admin endpoints (/api/admin/stats, /api/users, /api/users/{id}/admin, /api/admin/commands) properly return 403 for non-admin users. Access control implemented correctly."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED: Admin access control working perfectly. Non-admin users properly receive 403 Forbidden for admin endpoints."
+
+  - task: "Enhanced Admin Statistics Endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Enhanced admin stats endpoint (/api/admin/stats) working perfectly. Returns comprehensive statistics: 5 total users, 1 admin user, 4 active users today, purchase data, and server status. Fixed ObjectId serialization issue."
+
+  - task: "Admin User Activity Logs"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Admin user activity endpoint (/api/admin/users/activity) working perfectly. Returns 15 login logs and 5 user stats with proper access control. All activity tracking functional."
+
+  - task: "Admin Server Performance Logs"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Admin server logs endpoint (/api/admin/server/logs) working perfectly. Returns 17 server logs with statistics: avg 17.8 players, avg 113ms latency. Performance monitoring fully operational."
+
+  - task: "Shop Items Management"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Shop items endpoint (/api/shop/items) working perfectly. Returns 3 default items (Rang VIP, Pack Diamant, Terre Privée) with proper structure including id, name, description, price, category."
+
+  - task: "Shop Purchase System"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Shop purchase functionality (/api/shop/purchase/{item_id}) working perfectly. Successfully purchased 'Rang VIP' item, received purchase_id and confirmation message. Purchase system fully operational."
+
+  - task: "User Purchase History"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: User purchase history endpoint (/api/shop/purchases) working perfectly. Returns user's purchase history (2 purchases found). Fixed ObjectId serialization issue."
+
+  - task: "Admin Shop Management"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Admin shop purchases endpoint (/api/admin/shop/purchases) working perfectly. Returns all purchases (2 total) with proper admin access control. Shop management fully functional."
 
   - task: "Database Models and Operations"
     implemented: true
@@ -179,6 +287,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Database operations working perfectly. User creation, retrieval, and authentication all functional. MongoDB integration with Motor working correctly. User profiles accessible with proper access control."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED: Database operations still working perfectly. All CRUD operations functional, ObjectId serialization issues resolved."
 
 frontend:
   - task: "Minecraft Theme Design"
@@ -256,7 +367,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 0
+  test_sequence: 1
   run_ui: false
 
 test_plan:
@@ -270,3 +381,5 @@ agent_communication:
     message: "Site Minecraft créé avec succès ! Frontend fonctionne avec design thématique élégant. Backend implémenté avec toutes les fonctionnalités demandées : intégration serveur MC, auth Minecraft, espace admin. Prêt pour tests backend pour valider connexion serveur et API Mojang."
   - agent: "testing"
     message: "🎉 BACKEND TESTING COMPLETE - ALL SYSTEMS OPERATIONAL! Fixed .env file parsing issue and successfully tested all backend functionality. Minecraft server integration working (17/50 players online), Mojang API integration successful, JWT authentication functional, admin system properly secured, database operations working. All 7 test suites passed. Backend is production-ready!"
+  - agent: "testing"
+    message: "🚀 COMPREHENSIVE TESTING OF NEW FEATURES COMPLETED! All 15 backend test suites passed successfully. New features tested: Enhanced user tracking (login_count, last_login, last_seen), Admin stats endpoint with comprehensive statistics, Admin user activity logs, Admin server performance logs, Shop items management, Shop purchase system, User purchase history, Admin shop management. Fixed ObjectId serialization issues. All new endpoints operational and properly secured. Backend is fully functional with all requested enhancements!"
